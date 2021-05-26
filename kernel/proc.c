@@ -775,6 +775,7 @@ int swapout(struct proc* p, int local_page_index){
   swapped->va = toswap->va;
   toswap->state = PAGE_FREE;
   toswap->va =0;
+  sfence_vma();   // refreshing the TLB
   return 0;
 }
 //ADD
@@ -801,7 +802,7 @@ int swapout(struct proc* p, int local_page_index){
     // for (int i=0; i<MAX_PSYC_PAGES; i++){
     //   printf("s:%d-va:%d ", p->local_pages[i].state,p->local_pages[i].va);
     // }
-    printf("\n");
+    // printf("\n");
     page_meta->state = PAGE_USED;
     page_meta->va = va;
     return 0;
