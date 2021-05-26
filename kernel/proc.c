@@ -41,7 +41,37 @@ proc_mapstacks(pagetable_t kpgtbl) {
     kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   }
 }
+int page_metadata_init(struct proc* p){
+    for (int i = 0; i < MAX_PSYC_PAGES; i++)
+    {
+        p->local_pages[i].va = 0;
+        p->local_pages[i].state = PAGE_FREE;
+        p->swap_pages[i].offset_in_swap_file = i * PGSIZE;
+        p->swap_pages[i].va = 0;
+        p->swap_pages[i].state = PAGE_FREE;
+    }
+    return 0;
+}
 
+//free meta-data why do I need it?
+int swapfile_init(struct proc *p)
+{
+    if (p->swapFile == 0 && createSwapFile(p) < 0) {
+            printf("swapfile_init: creating swapfile failled\n");
+            return -1;
+    }
+    int max_swap_file_size = PGSIZE * MAX_PSYC_PAGES;
+    char *mem = kalloc(); //block of garbge
+    for (int placeOnFile = 0; placeOnFile < max_swap_file_size; placeOnFile += PGSIZE)
+    {
+        if (writeToSwapFile(p, (char *)mem, placeOnFile, PGSIZE) < 0)
+        {
+            return -1;
+        }
+    }
+    kfree(mem);
+    return 0;
+}
 // initialize the proc table at boot time.
 void
 procinit(void)
@@ -311,6 +341,30 @@ fork(void)
   np->parent = p;
   release(&wait_lock);
 
+  // ADDED
+  if (np->pid>2)// main and shell don't need paging mechanizem
+    {
+        if (swapfile_init(np) < 0)
+        {
+            printf("fork: failed swappage_init\n");
+            freeproc(np);
+            return -1;
+        }
+        if(copy_swapfile(p, np)<0){
+            printf("fork: copy_swapfile faild\n");
+            return -1;
+        }
+
+        if (page_metadata_init(np) < 0) 
+        {
+            printf("fork: faild Pge_metadata_init\n");
+            freeproc(np);
+            return -1;
+        }
+        memmove(p->local_pages, np->local_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
+        memmove(p->swap_pages, np->swap_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
+    }
+  
   acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);
@@ -463,7 +517,6 @@ scheduler(void)
     }
   }
 }
-
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
@@ -653,4 +706,21 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+int copy_swapfile(struct proc* source, struct proc* target){
+    if (source ==0 || target == 0){
+      return -1;
+    }
+    char* buf = kalloc();
+    int swapfilesize = PGSIZE * MAX_PSYC_PAGES;
+    for (int loc = 0; loc<swapfilesize; loc += PGSIZE){
+      if (readFromSwapFile(source, buf, loc, PGSIZE)<0){
+        return -1;
+      }
+      if (writeToSwapFile(target, buf, loc, PGSIZE)<0){
+        return -1;
+      }
+    }
+    return 0;
 }

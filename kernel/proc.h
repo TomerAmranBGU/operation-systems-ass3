@@ -28,6 +28,7 @@ struct cpu {
 
 extern struct cpu cpus[NCPU];
 
+
 // per-process data for the trap handling code in trampoline.S.
 // sits in a page by itself just under the trampoline page in the
 // user page table. not specially mapped in the kernel page table.
@@ -81,6 +82,15 @@ struct trapframe {
 };
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum pagestate {PAGE_FREE, PAGE_USED};
+
+struct page_metadata{
+  char* va;
+  int state;
+  int in_memory;
+  int offset_in_swap_file;
+};
+
 
 // Per-process state
 struct proc {
@@ -106,5 +116,7 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  struct file *swapFile;
+  struct file *swapFile;       // a pointer to the swap file
+  struct page_metadata local_pages[MAX_PSYC_PAGES];
+  struct page_metadata swap_pages[MAX_PSYC_PAGES];
 };
