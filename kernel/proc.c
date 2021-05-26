@@ -340,30 +340,34 @@ fork(void)
   np->parent = p;
   release(&wait_lock);
 
-  // // ADDED
-  // if (np->pid>2)// main and shell don't need paging mechanizem
-  //   {
-  //       if (swapfile_init(np) < 0)
-  //       {
-  //           printf("fork: failed swappage_init\n");
-  //           freeproc(np);
-  //           return -1;
-  //       }
-  //       if(copy_swapfile(p, np)<0){
-  //           printf("fork: copy_swapfile faild\n");
-  //           return -1;
-  //       }
-
-  //       if (page_metadata_init(np) < 0) 
-  //       {
-  //           printf("fork: faild Pge_metadata_init\n");
-  //           freeproc(np);
-  //           return -1;
-  //       }
-  //       memmove(p->local_pages, np->local_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
-  //       memmove(p->swap_pages, np->swap_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
-  //   }
-  
+  // ADDED
+  // NEW PROCCESS
+  if (np->pid>2)// main and shell don't need paging mechanizem
+    {
+        if (swapfile_init(np) < 0)
+        {
+            printf("fork: failed swappage_init\n");
+            freeproc(np);
+            return -1;
+        }
+        if (page_metadata_init(np) < 0) 
+        {
+            printf("fork: faild page_metadata_init\n");
+            freeproc(np);
+            return -1;
+        }
+     
+    }
+  //OLD PROCCESS
+  if (p->pid >2){
+     printf("copy\n");
+        if(copy_swapfile(p, np)<0){
+            printf("fork: copy_swapfile faild\n");
+            return -1;
+        }
+      memmove(p->local_pages, np->local_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
+      memmove(p->swap_pages, np->swap_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
+  }
   acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);
@@ -711,9 +715,12 @@ int copy_swapfile(struct proc* source, struct proc* target){
     if (source ==0 || target == 0){
       return -1;
     }
-    char* buf = kalloc();
-    int swapfilesize = PGSIZE * MAX_PSYC_PAGES;
-    for (int loc = 0; loc<swapfilesize; loc += PGSIZE){
+    char* buf =(char*) kalloc();
+    for (int i =0; i<MAX_PSYC_PAGES; i++){
+      int loc = i * PGSIZE;
+      if (source->swap_pages[i].state == PAGE_FREE){ //optimization and safety
+        continue;
+      }
       if (readFromSwapFile(source, buf, loc, PGSIZE)<0){
         return -1;
       }
@@ -734,6 +741,7 @@ int choose_page_to_swap(struct proc* p){
 
 //ADDED
 int swapout(struct proc* p, int local_page_index){
+  printf("swaping out\n");
   //validate page to swap
   struct page_metadata* toswap =  &p->local_pages[local_page_index];
   pte_t* pte = walk(p->pagetable,toswap->va,0);
@@ -790,6 +798,10 @@ int swapout(struct proc* p, int local_page_index){
       freeindex = toswap_index;
     }
     page_meta = &p->local_pages[freeindex];
+    // for (int i=0; i<MAX_PSYC_PAGES; i++){
+    //   printf("s:%d-va:%d ", p->local_pages[i].state,p->local_pages[i].va);
+    // }
+    printf("\n");
     page_meta->state = PAGE_USED;
     page_meta->va = va;
     return 0;

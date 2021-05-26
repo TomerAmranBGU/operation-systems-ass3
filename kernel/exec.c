@@ -29,6 +29,15 @@ exec(char *path, char **argv)
   }
   ilock(ip);
 
+  //ADDED BACKUP PAGING META_DATA
+  struct page_metadata local_backup[MAX_PSYC_PAGES];
+  struct page_metadata swap_backup[MAX_PSYC_PAGES];
+  memmove(&local_backup, p->local_pages, sizeof(local_backup));
+  memmove(&swap_backup, p->swap_pages, sizeof(swap_backup));
+  //ADDED CLEARE PAGIN META-DATA
+  if (page_metadata_init(p)<0){
+    goto bad;
+  }
   // Check ELF header
   if(readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
     goto bad;
@@ -119,6 +128,9 @@ exec(char *path, char **argv)
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
  bad:
+  //ADDED restore paging metadata
+  memmove(p->local_pages,&local_backup, sizeof(local_backup));
+  memmove( p->swap_pages,&swap_backup, sizeof(swap_backup));
   if(pagetable)
     proc_freepagetable(pagetable, sz);
   if(ip){
