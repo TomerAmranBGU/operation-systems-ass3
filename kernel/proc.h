@@ -85,10 +85,8 @@ enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 enum pagestate {PAGE_FREE, PAGE_USED};
 
 struct page_metadata{
-  char* va;
+  uint64 va;
   int state;
-  int in_memory;
-  int offset_in_swap_file;
 };
 
 

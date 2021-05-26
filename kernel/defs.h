@@ -111,7 +111,11 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int             page_metadata_init(struct proc*);
-int copy_swapfile(struct proc* source, struct proc* target);
+int             copy_swapfile(struct proc* source, struct proc* target);
+int             register_new_page(struct proc*, uint64);
+int             choose_page_to_swap(struct proc*);
+int             swapout(struct proc*, int);
+int             find_local_slot(struct proc*);
 // swtch.S
 void            swtch(struct context*, struct context*);
 
@@ -181,7 +185,7 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
-
+pte_t *         walk(pagetable_t pagetable, uint64 va, int alloc);
 // plic.c
 void            plicinit(void);
 void            plicinithart(void);

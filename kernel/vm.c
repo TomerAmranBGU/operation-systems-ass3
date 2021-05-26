@@ -227,8 +227,8 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
   oldsz = PGROUNDUP(oldsz);
   for(a = oldsz; a < newsz; a += PGSIZE){
-    mem = kalloc();//[t] 
-    if(mem == 0){
+    mem = kalloc();// allocating physical memory 
+    if(mem == 0){ 
       uvmdealloc(pagetable, a, oldsz);
       return 0;
     }
@@ -237,7 +237,13 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
       kfree(mem);
       uvmdealloc(pagetable, a, oldsz);
       return 0;
-    }
+    };
+    //ADDED
+    if(register_new_page(myproc(), a)<0){ // this function know to eliminate main and shell so don't warray 'bout a thing
+        kfree(mem);
+        uvmdealloc(pagetable,a,oldsz);
+      }
+    
   }
   return newsz;
 }

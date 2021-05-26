@@ -46,7 +46,6 @@ int page_metadata_init(struct proc* p){
     {
         p->local_pages[i].va = 0;
         p->local_pages[i].state = PAGE_FREE;
-        p->swap_pages[i].offset_in_swap_file = i * PGSIZE;
         p->swap_pages[i].va = 0;
         p->swap_pages[i].state = PAGE_FREE;
     }
@@ -341,29 +340,29 @@ fork(void)
   np->parent = p;
   release(&wait_lock);
 
-  // ADDED
-  if (np->pid>2)// main and shell don't need paging mechanizem
-    {
-        if (swapfile_init(np) < 0)
-        {
-            printf("fork: failed swappage_init\n");
-            freeproc(np);
-            return -1;
-        }
-        if(copy_swapfile(p, np)<0){
-            printf("fork: copy_swapfile faild\n");
-            return -1;
-        }
+  // // ADDED
+  // if (np->pid>2)// main and shell don't need paging mechanizem
+  //   {
+  //       if (swapfile_init(np) < 0)
+  //       {
+  //           printf("fork: failed swappage_init\n");
+  //           freeproc(np);
+  //           return -1;
+  //       }
+  //       if(copy_swapfile(p, np)<0){
+  //           printf("fork: copy_swapfile faild\n");
+  //           return -1;
+  //       }
 
-        if (page_metadata_init(np) < 0) 
-        {
-            printf("fork: faild Pge_metadata_init\n");
-            freeproc(np);
-            return -1;
-        }
-        memmove(p->local_pages, np->local_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
-        memmove(p->swap_pages, np->swap_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
-    }
+  //       if (page_metadata_init(np) < 0) 
+  //       {
+  //           printf("fork: faild Pge_metadata_init\n");
+  //           freeproc(np);
+  //           return -1;
+  //       }
+  //       memmove(p->local_pages, np->local_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
+  //       memmove(p->swap_pages, np->swap_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
+  //   }
   
   acquire(&np->lock);
   np->state = RUNNABLE;
@@ -724,3 +723,82 @@ int copy_swapfile(struct proc* source, struct proc* target){
     }
     return 0;
 }
+//ADD
+//returns an index of the page to swap
+int choose_page_to_swap(struct proc* p){
+  // for now it always return the first page
+ 
+
+  return 0;
+}
+
+//ADDED
+int swapout(struct proc* p, int local_page_index){
+  //validate page to swap
+  struct page_metadata* toswap =  &p->local_pages[local_page_index];
+  pte_t* pte = walk(p->pagetable,toswap->va,0);
+  uint64 pa  = PTE2PA(*pte);
+  if (!(*pte & PTE_V)){
+    panic("tried to swap unvalid page\n");
+  }
+  if(toswap->state == PAGE_FREE){
+    panic("tried to swap out free page\n");
+  }
+  //FIND PLACE IN SWAP FILE
+    int freeindex = -1;
+   for (int i=0; i< MAX_PSYC_PAGES; i++){
+      if(p->swap_pages[i].state == PAGE_FREE)
+        freeindex = i;
+   }
+   if (freeindex == -1){
+     panic("no free place for page at swapfile;");
+   }
+  // copy out the page
+  if(writeToSwapFile(p, (char*)pa, local_page_index*PGSIZE, PGSIZE)<0){
+    panic("writeToSwapFile faild at swapout()\n");
+  };
+  // free local page memory
+  kfree((void *)pa);
+  *pte = *pte | PTE_PG; // flag - page swapedout
+  *pte &= ~PTE_V; // state in valid
+  //update metadata of both
+  struct page_metadata* swapped = &p->swap_pages[freeindex];
+  swapped->state = PAGE_USED;
+  swapped->va = toswap->va;
+  toswap->state = PAGE_FREE;
+  toswap->va =0;
+  return 0;
+}
+//ADD
+ int register_new_page(struct proc* p, uint64 va){
+    if (p->pid <= 2){
+        return 0;
+    }
+    struct page_metadata* page_meta;
+    int freeindex;
+    if((freeindex = find_local_slot(p))<0){
+      //swap file out
+      int toswap_index;
+      if((toswap_index = choose_page_to_swap(p))<0){
+        printf("choose_page_to_swap faild \n");
+        return -1;
+      }
+      if (swapout(p, toswap_index)<0){
+        printf("swapout faild\n");
+        return -1;
+      }
+      freeindex = toswap_index;
+    }
+    page_meta = &p->local_pages[freeindex];
+    page_meta->state = PAGE_USED;
+    page_meta->va = va;
+    return 0;
+ }
+ //return index of free space in local_pages metatdata
+ int find_local_slot(struct proc* p){
+   for (int i=0; i< MAX_PSYC_PAGES; i++){
+      if(p->local_pages[i].state == PAGE_FREE)
+        return i; 
+   }
+  return -1;
+ }
