@@ -149,7 +149,10 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
       return -1;
     if(*pte & PTE_V)
       panic("remap");
-    *pte = PA2PTE(pa) | perm | PTE_V;
+    // ADDED: only in-memory pages should be marked as valid
+        *pte = PA2PTE(pa) | perm;
+        if (!(perm & PTE_PG))
+            *pte |= PTE_V;;
     if(a == last)
       break;
     a += PGSIZE;
@@ -263,7 +266,7 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
     //ADDED
     for (int a = PGROUNDDOWN(oldsz - 1); a > PGROUNDDOWN(newsz); a -= PGSIZE) 
         {
-            if(remove_page( a) < 0)
+            if(remove_page(PGROUNDDOWN(a)) < 0)
                 panic("uvmdealloc: couldn't remove page");
         }
   }
@@ -318,13 +321,21 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
+    if((*pte & PTE_V) == 0 && !(*pte & PTE_PG)) // ADDED [&& (*pte & PTE_PG)]
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
+    if(flags & PTE_PG){
+        // if page is swapped out, we don't need to allocate new page
+        // but we do need to map it to the pagetable with the old flags.
+        mem =0;
+    }
+    else{
+      if((mem = kalloc()) == 0){
+        goto err;
+      }
+        memmove(mem, (char*)pa, PGSIZE);
+    }
     if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
       kfree(mem);
       goto err;

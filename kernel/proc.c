@@ -360,13 +360,12 @@ fork(void)
     }
   //OLD PROCCESS
   if (p->pid >2){
-     printf("copy\n");
         if(copy_swapfile(p, np)<0){
             printf("fork: copy_swapfile faild\n");
             return -1;
         }
-      memmove(p->local_pages, np->local_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
-      memmove(p->swap_pages, np->swap_pages, sizeof(struct page_metadata)*MAX_PSYC_PAGES);
+      memmove(np->local_pages, p->local_pages, sizeof(p->local_pages));
+        memmove(np->swap_pages, p->swap_pages, sizeof(p->swap_pages));
   }
   acquire(&np->lock);
   np->state = RUNNABLE;
@@ -878,7 +877,8 @@ int swapout(struct proc* p, int local_page_index){
         swapin(va);
     }
     else {
-      panic("segmentation fault\n");
+      printf("segmentation fault\n");
+      p->killed = 1;
     } 
     return 0;
  }
@@ -943,6 +943,7 @@ remove_page(uint64 va)
     struct proc* p = myproc(); 
     if (p->pid<=2)
         return 0;
+    // printf("\n");
     for (int i = 0; i < MAX_PSYC_PAGES; i++)
     {
         if (p->local_pages[i].va == va && p->local_pages[i].state == PAGE_USED)
@@ -953,6 +954,7 @@ remove_page(uint64 va)
             return 0;
         }
     }
+
     for (int i = 0; i < MAX_PSYC_PAGES; i++)
     {
         if (p->swap_pages[i].va == va && p->swap_pages[i].state == PAGE_USED)
