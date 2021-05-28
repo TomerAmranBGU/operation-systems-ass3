@@ -389,7 +389,18 @@ reparent(struct proc *p)
     }
   }
 }
-
+//ADDED
+int freemetadata(struct proc * p){
+  for (int i = 0; i < MAX_PSYC_PAGES; i++)
+    {
+        // p->local_pages[i].age = 0;
+        p->local_pages[i].va = 0;
+        p->local_pages[i].state = PAGE_FREE;
+        p->swap_pages[i].va = 0;
+        p->swap_pages[i].state = PAGE_FREE;
+    }
+    return 0;
+}
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait().
@@ -409,7 +420,14 @@ exit(int status)
       p->ofile[fd] = 0;
     }
   }
-
+  //ADDED
+  if(p->pid >2){
+    if(removeSwapFile(p)<0){
+      printf("exit: removeSwapFile faild\n");
+    }
+    p->swapFile = 0;
+    freemetadata(p);
+  }
   begin_op();
   iput(p->cwd);
   end_op();
@@ -918,3 +936,31 @@ find_localpage_by_va(uint va){
     sfence_vma();                            // refreshing the TLB
     return 0;
  }
+ //ADDED
+int 
+remove_page(uint64 va)
+{
+    struct proc* p = myproc(); 
+    if (p->pid<=2)
+        return 0;
+    for (int i = 0; i < MAX_PSYC_PAGES; i++)
+    {
+        if (p->local_pages[i].va == va && p->local_pages[i].state == PAGE_USED)
+        {
+            p->local_pages[i].va = 0;
+            p->local_pages[i].state = PAGE_FREE;
+            // p->local_pages[i].age = 0;
+            return 0;
+        }
+    }
+    for (int i = 0; i < MAX_PSYC_PAGES; i++)
+    {
+        if (p->swap_pages[i].va == va && p->swap_pages[i].state == PAGE_USED)
+        {
+            p->swap_pages[i].va = 0;
+            p->swap_pages[i].state = PAGE_FREE;
+            return 0;
+        }
+    }
+    return -1;
+}

@@ -260,6 +260,12 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
     int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
     uvmunmap(pagetable, PGROUNDUP(newsz), npages, 1);
+    //ADDED
+    for (int a = PGROUNDDOWN(oldsz - 1); a > PGROUNDDOWN(newsz); a -= PGSIZE) 
+        {
+            if(remove_page( a) < 0)
+                panic("uvmdealloc: couldn't remove page");
+        }
   }
 
   return newsz;

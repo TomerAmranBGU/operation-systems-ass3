@@ -120,6 +120,7 @@ int             pagefault(uint64);
 int             swapin(uint64);
 int             find_localpage_by_va(uint va);
 int             find_swappage_by_va(uint va);
+int             remove_page(uint64);
 // swtch.S
 void            swtch(struct context*, struct context*);
 
