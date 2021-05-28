@@ -65,7 +65,17 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } 
+  else if (r_scause()==12 || r_scause() == 13 || r_scause() ==15){
+      printf("scause:%d\n",r_scause());
+      uint64 faulting_va = r_stval();
+      if(pagefault(PGROUNDDOWN(faulting_va))<0){
+        panic("faild to handle page fault\n");
+
+      }
+      
+  }
+  else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
@@ -217,4 +227,5 @@ devintr()
     return 0;
   }
 }
+
 

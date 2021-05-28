@@ -5,7 +5,6 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
-
 /*
  * the kernel's page table.
  */
@@ -89,8 +88,10 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     if(*pte & PTE_V) {
       pagetable = (pagetable_t)PTE2PA(*pte);
     } else {
-      if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
+      if(!alloc || (pagetable = (pde_t*)kalloc()) == 0){
+        printf("walk: not alloceted\n");
         return 0;
+      }
       memset(pagetable, 0, PGSIZE);
       *pte = PA2PTE(pagetable) | PTE_V;
     }
@@ -165,18 +166,16 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 {
   uint64 a;
   pte_t *pte;
-
   if((va % PGSIZE) != 0)
     panic("uvmunmap: not aligned");
-
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
-    if((*pte & PTE_V) == 0)
+    if((*pte & PTE_V) == 0 && (*pte && PTE_PG==0))
       panic("uvmunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
-    if(do_free){
+    if(do_free && (*pte && PTE_PG==0)){
       uint64 pa = PTE2PA(*pte);
       kfree((void*)pa);
     }

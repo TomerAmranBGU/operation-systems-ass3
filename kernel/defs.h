@@ -116,6 +116,10 @@ int             register_new_page(struct proc*, uint64);
 int             choose_page_to_swap(struct proc*);
 int             swapout(struct proc*, int);
 int             find_local_slot(struct proc*);
+int             pagefault(uint64);
+int             swapin(uint64);
+int             find_localpage_by_va(uint va);
+int             find_swappage_by_va(uint va);
 // swtch.S
 void            swtch(struct context*, struct context*);
 
