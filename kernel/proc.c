@@ -750,6 +750,7 @@ int copy_swapfile(struct proc* source, struct proc* target){
 //ADD
 //returns an index of the page to swap
 int choose_page_to_swap(struct proc* p){
+  //
   // for now it always return the first page
   return 10;
 }
@@ -838,22 +839,8 @@ int swapout(struct proc* p, int local_page_index){
       freeindex = toswap_index;
     }
     new_page = &p->local_pages[freeindex];
-    // for (int i=0; i<MAX_PSYC_PAGES; i++){
-    //   printf("s:%d-va:%d ", p->local_pages[i].state,p->local_pages[i].va);
-    // }
-    // printf("\n");
-    // printf("before: ");
-    // for (int i=0; i<MAX_PSYC_PAGES; i++){
-    //   printf("s:%d", p->local_pages[i].state);
-    // }
-    // printf("\n");
     new_page->state = PAGE_USED;
     new_page->va = va;
-    // printf("after: ");
-    // for (int i=0; i<MAX_PSYC_PAGES; i++){
-    //   printf("s:%d", p->local_pages[i].state);
-    // }
-    // printf("\n");
     return 0;
  }
 
