@@ -70,7 +70,7 @@ int ones(uint number)
 
 int nfu_algo(struct proc *p)
 {
-  int index_to_return = 0;
+  int index_to_return = -1;
   int min_age = p->local_pages[0].age;
   for (int i = 0; i < MAX_PSYC_PAGES; i++)
   {
@@ -86,7 +86,7 @@ int nfu_algo(struct proc *p)
 int lapa_algo(struct proc *p)
 {
   int min_age = p->local_pages[0].age;
-  int index_to_return = 0;
+  int index_to_return = -1;
   int min_access = ones(p->local_pages[0].age);
   for (int i = 0; i < MAX_PSYC_PAGES; i++)
   {
@@ -122,6 +122,7 @@ int scfifo_algo(struct proc *p)
             return index_to_return;
         }
     }
+    return -1;
 }
 
 int page_metadata_init(struct proc *p)
@@ -139,13 +140,13 @@ int page_metadata_init(struct proc *p)
 int page_to_swap(struct proc *p)
 {
 #if SELECTION == SCFIFO
-  return algo_scfifo(p);
+  return scfifo_algo(p);
 #endif
 #if SELECTION == NFUA
-  return algo_nfua(p);
+  return nfua_algo(p);
 #endif
 #if SELECTION == LAPA
-  return algo_lapa_(p);
+  return lapa_algo(p);
 #endif
 #if SELECTION == SOME
   return choose_some_page(p);
@@ -1005,7 +1006,7 @@ int register_new_page(struct proc *p, uint64 va)
   {
     //swap file out
     int toswap_index;
-    if ((toswap_index = choose_page_to_swap(p)) < 0)
+    if ((toswap_index = page_to_swap(p)) < 0)
     {
       printf("choose_page_to_swap faild \n");
       return -1;
