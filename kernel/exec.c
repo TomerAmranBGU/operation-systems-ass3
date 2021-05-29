@@ -12,6 +12,7 @@ static int loadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uin
 int
 exec(char *path, char **argv)
 {
+  printf("exec\n");
   char *s, *last;
   int i, off;
   uint64 argc, sz = 0, sp, ustack[MAXARG+1], stackbase;
@@ -35,8 +36,11 @@ exec(char *path, char **argv)
   memmove(&local_backup, p->local_pages, sizeof(local_backup));
   memmove(&swap_backup, p->swap_pages, sizeof(swap_backup));
   //ADDED CLEARE PAGIN META-DATA
-  if (page_metadata_init(p)<0){
-    goto bad;
+  
+ if (p->pid >2){
+    if (page_metadata_init(p)<0){
+      goto bad;
+    }
   }
   // Check ELF header
   if(readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))

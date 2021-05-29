@@ -59,11 +59,16 @@ int swapfile_init(struct proc *p)
             printf("swapfile_init: creating swapfile failled\n");
             return -1;
     }
-    int max_swap_file_size = PGSIZE * MAX_PSYC_PAGES;
+    // return 0;
+
     char *mem = kalloc(); //block of garbge
-    for (int placeOnFile = 0; placeOnFile < max_swap_file_size; placeOnFile += PGSIZE)
+    char zero =14;
+    for(int i=0;i<PGSIZE;i++){
+      memmove(&mem[i],&zero, 1);
+    }
+    for (int i=0; i< MAX_PSYC_PAGES; i++)
     {
-        if (writeToSwapFile(p, (char *)mem, placeOnFile, PGSIZE) < 0)
+        if (writeToSwapFile(p, (char *)mem, i*PGSIZE, PGSIZE) < 0)
         {
             return -1;
         }
@@ -749,38 +754,38 @@ int copy_swapfile(struct proc* source, struct proc* target){
 }
 //ADD
 //returns an index of the page to swap
+int i =3;
 int choose_page_to_swap(struct proc* p){
   //
   // for now it always return the first page
-  return 10;
+  i = (i+2)%MAX_PSYC_PAGES;
+
+  return 1;
 }
 void print_flags_of_all_the_pages_in_swap(){
-  // struct proc* p = myproc();
-  // printf("swap\n" );
-  // for (int i=0 ; i< 16; i++){
-  //   struct page_metadata page = p->swap_pages[i];
-  //   if (page.state == PAGE_USED){
-  //     pte_t* pte = walk(p->pagetable, page.va, 0);
-  //     printf("i:%d, PTE_V:%d, PTE_PG: %d,va:%p, pte:%p\n", i, *pte & PTE_V, *pte & PTE_PG, page.va, *pte);
-  //   }
-  // }
-  // printf("local\n");
-  // for (int i=0 ; i< 16; i++){
-  //   struct page_metadata page = p->local_pages[i];
-  //   if (page.state == PAGE_USED){
-  //     pte_t* pte = walk(p->pagetable, page.va, 0);
-  //     printf("i:%d, PTE_V:%d, PTE_PG: %d,va:%p, pte:%p\n", i, *pte & PTE_V, *pte & PTE_PG, page.va, *pte);
-  //   }
-  // }
+  return;
+  struct proc* p = myproc();
+  printf("swap\n" );
+  for (int i=0 ; i< 16; i++){
+    struct page_metadata page = p->swap_pages[i];
+    if (page.state == PAGE_USED){
+      pte_t* pte = walk(p->pagetable, page.va, 0);
+      printf("i:%d, PTE_V:%d, PTE_PG: %d,va:%p, pte:%p\n", i, *pte & PTE_V, *pte & PTE_PG, page.va, *pte);
+    }
+  }
+  printf("local\n");
+  for (int i=0 ; i< 16; i++){
+    struct page_metadata page = p->local_pages[i];
+    if (page.state == PAGE_USED){
+      pte_t* pte = walk(p->pagetable, page.va, 0);
+      printf("i:%d, PTE_V:%d, PTE_PG: %d,va:%p, pte:%p\n", i, *pte & PTE_V, *pte & PTE_PG, page.va, *pte);
+    }
+  }
 }
-//ADDED
-int swapout(struct proc* p, int local_page_index){
-  // printf("swaping out\n");
-  //validate page to swap
-  struct page_metadata* local_page =  &p->local_pages[local_page_index];
 
-  // printf("pte:%p\n", walk(myproc()->pagetable,local_page->va,0));
-  // printf("va:%p\n",local_page->va);
+//ADDED
+int swapout(struct proc* p, int local_page_toswapout_index){
+  struct page_metadata* local_page =  &p->local_pages[local_page_toswapout_index];
   pte_t* pte = walk(p->pagetable,local_page->va,0);
   uint64 pa  = PTE2PA(*pte);
   if (!(*pte & PTE_V)){
@@ -790,23 +795,23 @@ int swapout(struct proc* p, int local_page_index){
     panic("tried to swap out free page\n");
   }
   //FIND PLACE IN SWAP FILE
-    int freeindex = -1;
-   for (int i=0; i< MAX_PSYC_PAGES; i++){
-      if(p->swap_pages[i].state == PAGE_FREE){
+  int free_swap_index = -1;
+  for (int i=0; i< MAX_PSYC_PAGES; i++){
+    if(p->swap_pages[i].state == PAGE_FREE){
 
-        freeindex = i;
-        break;
-      }
-   }
-   if (freeindex == -1){
-     panic("no free place for page at swapfile;");
-   }
+      free_swap_index = i;
+      break;
+    }
+  }
+  if (free_swap_index == -1){
+    panic("no free place for page at swapfile;");
+  }
   // copy out the page
-  if(writeToSwapFile(p, (char*)pa, local_page_index*PGSIZE, PGSIZE)<0){
+  if(writeToSwapFile(p, (char*)pa, free_swap_index*PGSIZE, PGSIZE)<0){
     panic("writeToSwapFile faild at swapout()\n");
   };
   //update metadata of both
-  struct page_metadata* swap_page = &p->swap_pages[freeindex];
+  struct page_metadata* swap_page = &p->swap_pages[free_swap_index];
   swap_page->state = PAGE_USED;
   swap_page->va = local_page->va;
   local_page->state = PAGE_FREE;
@@ -903,14 +908,17 @@ find_localpage_by_va(uint va){
  int swapin(uint64 va){
     struct proc* p = myproc();
     int page_index = find_swappage_by_va(va);
+    // printf("page to swapin:%d\n",page_index);
     if (page_index<0){
       panic("swapin: can't locate swaped page at swap_pages\n");
     }
+    // printf("page index in swapfile: %d\n", page_index);
     // take out the page form the swap
     char* buf = kalloc();
     if(readFromSwapFile(p,buf, page_index*PGSIZE, PGSIZE)<0){
       panic("swapin: can't readFromSwapFile");
     }
+    // printf("first char of buf: %d\n",buf[0]);
     pte_t* pte = walk(p->pagetable,va, 0);
     *pte |= PTE_V;
     *pte &= ~PTE_PG;
