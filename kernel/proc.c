@@ -68,7 +68,7 @@ int ones(uint number)
   return count_ones;
 }
 
-int nfu_algo(struct proc *p)
+int nfua_algo(struct proc *p)
 {
   int index_to_return = -1;
   int min_age = p->local_pages[0].age;

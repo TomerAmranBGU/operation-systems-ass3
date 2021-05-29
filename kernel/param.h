@@ -13,3 +13,9 @@
 #define MAXPATH      128   // maximum file path name
 #define MAX_PSYC_PAGES 16
 #define MAX_TOTAL_PAGES 32
+//compliation flags
+#define NONE 0
+#define SOME 1
+#define SCFIFO 2
+#define NFUA 3
+#define LAPA 4
