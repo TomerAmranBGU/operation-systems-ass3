@@ -466,7 +466,7 @@ int fork(void)
 
   // ADDED
   // NEW PROCCESS
-  if (np->pid > 2) // main and shell don't need paging mechanizem
+  if (should_apply_swap(np)) // main and shell don't need paging mechanizem
   {
     if (swapfile_init(np) < 0)
     {
@@ -482,7 +482,7 @@ int fork(void)
     }
   }
   //OLD PROCCESS
-  if (p->pid > 2)
+  if (should_apply_swap(p))
   {
     if (copy_swapfile(p, np) < 0)
     {
@@ -548,7 +548,7 @@ void exit(int status)
     }
   }
   //ADDED
-  if (p->pid > 2)
+  if (should_apply_swap(p))
   {
     if (removeSwapFile(p) < 0)
     {
@@ -1001,7 +1001,7 @@ int swapout(struct proc *p, int local_page_toswapout_index)
 //ADD
 int register_new_page(struct proc *p, uint64 va)
 {
-  if (p->pid <= 2)
+  if (!should_apply_swap(p))
   {
     return 0;
   }
@@ -1044,8 +1044,9 @@ int find_local_slot(struct proc *p)
 int pagefault(uint64 va)
 {
   struct proc *p = myproc();
-  if (p->pid <= 2)
+  if (!should_apply_swap(p))
   {
+    printf("%d\n",p->pid);
     panic("pagefault: procces with pid <=2 arrived\n");
   }
   pte_t *pte = walk(p->pagetable, va, 0);
@@ -1128,7 +1129,7 @@ int swapin(uint64 va)
 int remove_page(uint64 va)
 {
   struct proc *p = myproc();
-  if (p->pid <= 2)
+  if (!should_apply_swap(p))
     return 0;
   // printf("\n");
   for (int i = 0; i < MAX_PSYC_PAGES; i++)
@@ -1153,3 +1154,15 @@ int remove_page(uint64 va)
   }
   return -1;
 }
+int should_apply_swap(struct proc* p){
+  #if SELECTION == NONE
+    return 0;
+  #endif
+  if (p->pid > 2){
+      return 1;
+  }
+  else{
+    return 0;
+  }
+}
+  

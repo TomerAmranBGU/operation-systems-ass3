@@ -37,7 +37,7 @@ exec(char *path, char **argv)
   memmove(&swap_backup, p->swap_pages, sizeof(swap_backup));
   //ADDED CLEARE PAGIN META-DATA
   
- if (p->pid >2){
+ if (should_apply_swap(p)){
     if (page_metadata_init(p)<0){
       goto bad;
     }

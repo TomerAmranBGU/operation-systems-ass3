@@ -66,12 +66,11 @@ usertrap(void)
 
     syscall();
   } 
-  else if (r_scause()==12 || r_scause() == 13 || r_scause() ==15){
+  else if (should_apply_swap(p) && (r_scause()==12 || r_scause() == 13 || r_scause() ==15)){
       // printf("scause:%d\n",r_scause());
       uint64 faulting_va = r_stval();
       if(pagefault(PGROUNDDOWN(faulting_va))<0){
         panic("faild to handle page fault\n");
-
       }
       
   }

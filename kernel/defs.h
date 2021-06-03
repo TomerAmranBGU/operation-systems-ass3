@@ -126,6 +126,7 @@ int             scfifo_algo(struct proc*);
 int             lapa_algo(struct proc*);
 int             nfua_algo(struct proc*);
 int             choose_some_page(struct proc*);
+int            should_apply_swap(struct proc* p);
 // swtch.S
 void            swtch(struct context*, struct context*);
 
