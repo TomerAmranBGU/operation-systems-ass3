@@ -54,7 +54,7 @@ void proc_mapstacks(pagetable_t kpgtbl)
 
 int choose_some_page(struct proc *p)
 {
-  return 1;
+  return 0;
 }
 
 int ones(uint number)
@@ -83,10 +83,13 @@ int nfua_algo(struct proc *p)
   return index_to_return;
 }
 
+
+
 int lapa_algo(struct proc *p)
 {
+  //TODO: there is no error handling here
+  int index_to_return = 0;
   int min_age = p->local_pages[0].age;
-  int index_to_return = -1;
   int min_access = ones(p->local_pages[0].age);
   for (int i = 0; i < MAX_PSYC_PAGES; i++)
   {
@@ -141,25 +144,18 @@ int page_to_swap(struct proc *p)
 {
 int selected =-1;
 #if SELECTION == SCFIFO
-  printf("SCFIFO\n");  
   selected = scfifo_algo(p);
 #endif
 #if SELECTION == NFUA
-  printf("NFUA\n" );  
-
   selected = nfua_algo(p);
 #endif
 #if SELECTION == LAPA
-  printf("LAPA\n");  
-
   selected = lapa_algo(p);
 #endif
 #if SELECTION == SOME
-  printf("SOME\n");  
-
   selected = choose_some_page(p);
 #endif
-  printf("swapindex:%d\n",selected);
+  // printf("swapindex:%d\n",selected);
   return selected;
 }
 

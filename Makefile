@@ -142,6 +142,7 @@ UPROGS=\
 	$U/_test1\
 	$U/_dolavtest\
 	$U/_ourtest\
+	$U/_tests\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
