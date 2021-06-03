@@ -124,7 +124,7 @@ int             remove_page(uint64);
 int             swapfile_init(struct proc*);
 int             scfifo_algo(struct proc*);
 int             lapa_algo(struct proc*);
-int             nfu_algo(struct proc*);
+int             nfua_algo(struct proc*);
 int             choose_some_page(struct proc*);
 // swtch.S
 void            swtch(struct context*, struct context*);

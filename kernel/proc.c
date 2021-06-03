@@ -139,19 +139,28 @@ int page_metadata_init(struct proc *p)
 
 int page_to_swap(struct proc *p)
 {
+int selected =-1;
 #if SELECTION == SCFIFO
-  return scfifo_algo(p);
+  printf("SCFIFO\n");  
+  selected = scfifo_algo(p);
 #endif
 #if SELECTION == NFUA
-  return nfua_algo(p);
+  printf("NFUA\n" );  
+
+  selected = nfua_algo(p);
 #endif
 #if SELECTION == LAPA
-  return lapa_algo(p);
+  printf("LAPA\n");  
+
+  selected = lapa_algo(p);
 #endif
 #if SELECTION == SOME
-  return choose_some_page(p);
+  printf("SOME\n");  
+
+  selected = choose_some_page(p);
 #endif
-  return -1;
+  printf("swapindex:%d\n",selected);
+  return selected;
 }
 
 //free meta-data why do I need it?
